@@ -106,6 +106,7 @@ $build_pnor_command .= " --binFile_SBE $scratch_dir/$sbe_binary_filename";
 $build_pnor_command .= " --binFile_SBEC $scratch_dir/$sbec_binary_filename";
 $build_pnor_command .= " --binFile_WINK $scratch_dir/$wink_binary_filename";
 $build_pnor_command .= " --binFile_HBB $scratch_dir/hostboot.header.bin.ecc";
+$build_pnor_command .= " --binFile_HBB2 $scratch_dir/hostboot.header.bin.ecc";
 $build_pnor_command .= " --binFile_HBI $scratch_dir/hostboot_extended.header.bin.ecc";
 $build_pnor_command .= " --binFile_HBRT $scratch_dir/hostboot_runtime.header.bin.ecc";
 $build_pnor_command .= " --binFile_HBEL $scratch_dir/hbel.bin.ecc";
