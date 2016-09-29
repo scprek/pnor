@@ -21,6 +21,7 @@ my $payload = "";
 my $payload_filename = "";
 my $xz_compression = 0;
 my $secureboot = 0;
+my $key_transition = 0;
 my $pnor_layout = "";
 my $debug = 0;
 
@@ -94,6 +95,9 @@ while (@ARGV > 0){
     elsif (/^-secureboot/i){
         $secureboot = 1;
     }
+    elsif (/^-key_transition/i){
+        $key_transition = 1;
+    }
     elsif (/^-pnor_layout/i){
         $pnor_layout = $ARGV[1] or die "Bad command line arg given: expecting a filepath to PNOR layout file.\n";
         shift;
@@ -122,6 +126,7 @@ if ($payload ne "")
 
 sub processConvergedSections {
 
+    use constant EMPTY => "EMPTY";
     # Source and destination file for each supported section
     my %sections=();
     $sections{HBB}{in}   = "$hb_image_dir/img/hostboot.bin";
@@ -136,6 +141,7 @@ sub processConvergedSections {
     $sections{SBEC}{out} = "$scratch_dir/$sbec_binary_filename";
     $sections{PAYLOAD}{in}  = "$payload.bin";
     $sections{PAYLOAD}{out} = "$scratch_dir/$payload_filename";
+    $sections{SBKT}{out} = "$scratch_dir/SBKT.bin";
 
     # Build up the system bin files specification
     my $system_bin_files;
@@ -148,28 +154,36 @@ sub processConvergedSections {
                 . "or ECC, neither of which is allowed.";
         }
 
-        # Stage the input file
-        run_command("cp $sections{$section}{in} "
-            . "$scratch_dir/$section.staged");
-
-        # If secureboot compile, there can be extra protected
-        # and unprotected versions of the input to stage
-        if(-e "$sections{$section}{in}.protected")
-        {
-            run_command("cp $sections{$section}{in}.protected "
-                . "$scratch_dir/$section.staged.protected");
-        }
-
-        if(-e "$sections{$section}{in}.unprotected")
-        {
-            run_command("cp $sections{$section}{in}.unprotected "
-                . "$scratch_dir/$section.staged.unprotected");
-        }
-
-        # Build up the systemBinFiles argument
         my $separator = length($system_bin_files) ? "," : "";
-        $system_bin_files .= "$separator$section=$scratch_dir/"
-            . "$section.staged";
+        # If no input bin file then the pnor script handles creating the content
+        if(!exists $sections{$section}{in})
+        {
+             # Build up the systemBinFiles argument
+             $system_bin_files .= "$separator$section=".EMPTY;
+        }
+        else
+        {
+            # Stage the input file
+            run_command("cp $sections{$section}{in} "
+             . "$scratch_dir/$section.staged");
+
+            # If secureboot compile, there can be extra protected
+            # and unprotected versions of the input to stage
+            if(-e "$sections{$section}{in}.protected")
+            {
+                run_command("cp $sections{$section}{in}.protected "
+                    . "$scratch_dir/$section.staged.protected");
+            }
+
+            if(-e "$sections{$section}{in}.unprotected")
+            {
+                run_command("cp $sections{$section}{in}.unprotected "
+                    . "$scratch_dir/$section.staged.unprotected");
+            }
+            # Build up the systemBinFiles argument
+            $system_bin_files .= "$separator$section=$scratch_dir/"
+                . "$section.staged";
+        }
     }
 
     if(length($system_bin_files))
@@ -185,6 +199,8 @@ sub processConvergedSections {
 
         # Determine whether to securely sign the images
         my $securebootArg = $secureboot ? "--secureboot" : "";
+        # Determine whether a key transition should take place 
+        my $keyTransitionArg = $key_transition ? "--key-transition" : "";
 
         # Process each image
         my $cmd =   "cd $scratch_dir && "
@@ -192,7 +208,7 @@ sub processConvergedSections {
                       . "--binDir $scratch_dir "
                       . "--systemBinFiles $system_bin_files "
                       . "--pnorLayout $pnor_layout "
-                      . "$securebootArg ";
+                      . "$securebootArg $keyTransitionArg";
 
         # Print context not visible in the actual command
         if($debug)
@@ -208,6 +224,7 @@ sub processConvergedSections {
         # Copy each output file to its final destination
         foreach my $section (keys %sections)
         {
+            next if(!exists $sections{$section}{in});
             run_command("cp $scratch_dir/$section.bin "
                 . "$sections{$section}{out}");
         }

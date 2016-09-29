@@ -123,6 +123,7 @@ $build_pnor_command .= " --binFile_FIRDATA $scratch_dir/firdata.bin.ecc";
 $build_pnor_command .= " --binFile_CAPP $scratch_dir/cappucode.bin.ecc";
 $build_pnor_command .= " --binFile_SECBOOT $scratch_dir/secboot.bin.ecc";
 $build_pnor_command .= " --binFile_VERSION $openpower_version_filename";
+$build_pnor_command .= " --binFile_SBKT $scratch_dir/SBKT.bin";
 $build_pnor_command .= " --fpartCmd \"fpart\"";
 $build_pnor_command .= " --fcpCmd \"fcp\"";
 print "###############################";
